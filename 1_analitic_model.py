@@ -1,11 +1,8 @@
 import pandas as pd
 import numpy as np
-import qutip as qu
-import random
 import pickle
 import scipy
 
-from matplotlib import pyplot as plt
 from tqdm import tqdm
 
 df = pd.read_excel('09-1216A-A_DW_2000Q_6_annealing_schedule.xls', sheet_name=1)
