@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import pickle
 import scipy.interpolate
-from matplotlib import pyplot as plt
+from tqdm import tqdm
 
 sigmax = np.array([[0, 1], [1, 0]])
 sigmaz = np.diag([1, -1])
@@ -163,7 +163,9 @@ def lindblad_evolution(t, h, J={}):
     # perform evolution
     dt = t[1] - t[0]
 
-    for i, x in enumerate(t):
+    for i in tqdm(range(len(t)), desc="t", leave=False, ncols=80):
+        x = t[i]
+
         # 4th order Runge-Kutta
         k1 = dt * liovillian(H(x), rho)
         k2 = dt * liovillian(H(x + dt / 2), rho + k1 / 2)
@@ -179,12 +181,14 @@ def lindblad_evolution(t, h, J={}):
             sigmax_composit = np.kron(np.kron(np.eye(2 ** qub), sigmax),
                                       np.eye(2 ** (num_qubits - qub - 1)))
 
-            sigmax_expect_values[i, qub] = np.trace(np.dot(sigmax_composit, rho))
+            sigmax_expect_values[i, qub] = np.real(
+                np.trace(np.dot(sigmax_composit, rho)))
 
             # sigma z ^ i tensor identity over all others
             sigmaz_composit = np.kron(np.kron(np.eye(2 ** qub), sigmaz),
                                       np.eye(2 ** (num_qubits - qub - 1)))
-            sigmaz_expect_values[i, qub] = np.trace(np.dot(sigmaz_composit, rho))
+            sigmaz_expect_values[i, qub] = np.real(
+                np.trace(np.dot(sigmaz_composit, rho)))
 
         # check runge kutta errors (normalization and hermitianity)
         err += abs(1 - np.trace(rho)) ** 2
@@ -202,51 +206,29 @@ def lindblad_evolution(t, h, J={}):
 
 if __name__ == '__main__':
     # load data
-    biases1, spin_up1, dspin_up1 = pickle.load(open("data/results.pickle", "rb"))
-    biases2, spin_up2, dspin_up2 = pickle.load(open("data/results2.pickle", "rb"))
     df = pd.read_excel('09-1216A-A_DW_2000Q_6_annealing_schedule.xls', sheet_name=1)
 
     # function to evolve rho
-    temp = 13.5
+    temp = 13.0
     omega_c = 8 * np.pi
     g2 = 0.4 / (2 * np.pi)
     beta = 47.9924341590788 / temp  # 1 / GHz
-    t = np.linspace(0, 20, 10 ** 5 + 1)
+    t = np.linspace(0, 20, 2 * 10 ** 5 + 1)
 
-    h = [0.05]  # [0.1, 0]
-    J = {}  # {(0, 1): 1}
+    print('temp:', temp)
 
+    spin_up = []
+    biases = np.linspace(-0.3, 0.3, 50)
     # performing numerical calculation
-    qubits_exp_values = lindblad_evolution(t, h, J)
-    sigmax1, sigmaz1 = qubits_exp_values[0]
+    for hA in tqdm(biases, desc="h", ncols=80):
+        h = [hA, 0]  # [0.05]
+        J = {(0, 1): -1}  # {}
+        qubits_exp_values = lindblad_evolution(t, h, J)
+        sigmax1, sigmaz1 = qubits_exp_values[0]
+        sigmax2, sigmaz2 = qubits_exp_values[1]
 
-    # lindblad evolution
-    plt.figure('evolution')
-    plt.plot(t, sigmaz1, label=r'$\sigma_z$')
-    plt.plot(t, sigmax1, label=r'$\sigma_x$')
+        spin_up.append(sigmaz1[-1] / 2 + 0.5)
 
-    plt.title('Lindblad master equation: T=13.5mK, h=0.05')
-    plt.xlabel(r't ($\mu s$)')
-    plt.ylabel('Expectation values')
-    plt.legend()
-
-    # grafico popolaz ground state vs h - 1 qubit
-    plt.figure('1 qubit temperature')
-    plt.scatter(h, sigmaz1[-1] / 2 + .5)
-    plt.errorbar(biases1, spin_up1, dspin_up1, marker='.', linestyle='')
-
-    plt.title('single qubit temperature')
-    plt.xlabel('h')
-    plt.ylabel(r'$P_\uparrow$')
-
-    # grafico popolaz ground state vs h - 2 qubits
-    plt.figure('2 qubits temperature')
-    plt.errorbar(biases2, spin_up2, dspin_up2, marker='.', linestyle='', label='2 qubits')
-    plt.errorbar(biases1, spin_up1, dspin_up1, marker='.', linestyle='', label='1 qubit', alpha=0.3)
-
-    plt.title('two qubits temperature')
-    plt.xlabel('h')
-    plt.ylabel(r'$P_\uparrow$')
-    plt.legend()
-
-    plt.show()
+        # save results on file
+        pickle.dump((biases, spin_up),
+                    open(f"data/qu2_lindblad_various_h{temp}.pickle", "wb"))

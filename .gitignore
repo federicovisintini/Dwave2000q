@@ -1,3 +1,18 @@
+# Personal files
+09-1216A-A_DW_2000Q_6_annealing_schedule.xls
+QPU_Properties_DW_2000Q_6.pdf
+analisi_buffoni.py
+buffoni.py
+qutip_examples.py
+dimod/
+ocean64/
+
+# MacOS files
+.DS_Store
+
+# PyCharme Project
+.idea/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
