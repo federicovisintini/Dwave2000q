@@ -13,13 +13,13 @@ the thermalization process of a quantum annealer,
 a D-Wave QPU made of superconducting qubits
 ([https://www.dwavesys.com](https://www.dwavesys.com)).
 
-All the experiments are so far run through Leap
-cloud service and the code is based on the D-Wave
+All the experiments so far run through Leap
+cloud service. The code is based on the D-Wave
 Ocean Software, documentation available
 [here](https://docs.ocean.dwavesys.com/en/latest/index.html).
 
 ## Getting started
-Steps to setup your project locally
+Steps to set up your project locally
 
 ### Prerequisites
 - Python 3
@@ -46,7 +46,7 @@ Steps to setup your project locally
    $ pip install -r requirements.txt
    ```
 
-4. (recommended) Setup the D-Wave environment
+4. (recommended) Set up the D-Wave environment
    following the official documentation [here](https://docs.ocean.dwavesys.com/en/stable/overview/install.html#set-up-your-environment).
 
 5. Create a [Leap](https://cloud.dwavesys.com/leap/login/?next=/leap/)
@@ -63,7 +63,7 @@ Code which uses QPU time is commented so whole scrips / notebooks
 can be run whithout worrying. Code which takes a long time to execute
 is decleared in comments / md.
 
-To run the notebooks (**.ipynb*) you will need to use jupyter;
+To run the notebooks (*_.ipynb_) you will need to use jupyter;
 open the terminal (activate the venv if you created it) and type:
 ```bash
 $ jupyter notebook
@@ -73,28 +73,27 @@ $ jupyter notebook
 This first notebook introduces the machine hamiltonian,
 plotting the annealing functions *A(s)* and *B(s)*.
 
-We tries to evaluate the thermalisazion of a single qubit
+We try to evaluate the thermalisazion of a single qubit
 in two different methods:
 
 1. We let the spin evolve in the idling channel in the final 
-   state of the anneal, or said another way
+   state of the annealling, or said another way
    we initialise the spin in the first excited state and let it decay
    (this method fails);
    
 2. Taking inspiration from the official documentation 
    we measure the temperature assuming classical Boltzamnn distribution
-   as final state (good result but using perhabs an oversimplifing assumption).
+   as final state (good result but using perhabs an oversimplifing assumption)
+   <img src="images/temperature_fit.png" width="480">
    
-![Alt text](images/temperature_fit.png?raw=true)
-   
-Finally we inquire the presence of entanglement for some two-qubit state
+Finally, we inquire the presence of entanglement for some two-qubit state
 that could be created in the machine.
 
 #### Analitic model (*python notebook*)
 In this notebook we focus our effort to find a microscopic model
 that can describe the spin-enviroment interaction through
 a Lindblad Master Equation.
-![Alt text](images/lindblad_equation.png?raw=true)
+<img src="images/lindblad_equation.png" width="480">
 
 
 A Python script has been introduced to parallelise and speed up
@@ -103,8 +102,9 @@ We introduce also QuTiP a python module to simulate quantum systems.
 
 We then start focusing on the two-qubit thermalization,
 performing an experiment and numerically computing the concurrece
-(entanglement measure) at all points during the anneal.
-![Alt text](images/concurrence.png?raw=true)
+(entanglement measure) at all points during the annealling.
+<img src="images/concurrence.png" width="480">
+
 
 #### Two temperature simulation / plot (*python scripts*)
 First thing we convert the result of two-qubit experiment to a more usable
@@ -113,8 +113,8 @@ form using *2_save_results.py*
 Then we focus on generalizing the single spin Lindblad Master Equation
 to a general case of n-qubits interacting, in *2_two_temperature_simulation.py*.
 
-Finally the script *2_two_temperatures_simulation.py* plot said results.
-![Alt text](images/2_qubits_temperature.png?raw=true)
+Finally, the script *2_two_temperatures_simulation.py* plot said results.
+<img src="images/2_qubits_temperature.png" width="480">
 
 
 ## References
