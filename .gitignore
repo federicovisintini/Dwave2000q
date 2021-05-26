@@ -1,6 +1,7 @@
 # Personal files
 example_code/
 data_old/
+myenv/
 
 # MacOS files
 .DS_Store
