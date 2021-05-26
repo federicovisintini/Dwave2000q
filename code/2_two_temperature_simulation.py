@@ -209,16 +209,16 @@ if __name__ == '__main__':
     df = pd.read_excel('09-1216A-A_DW_2000Q_6_annealing_schedule.xls', sheet_name=1)
 
     # function to evolve rho
-    temp = 13.0
+    temp = 14.53
     omega_c = 8 * np.pi
-    g2 = 0.4 / (2 * np.pi)
+    g2 = 0.003  # 0.4 / (2 * np.pi)
     beta = 47.9924341590788 / temp  # 1 / GHz
     t = np.linspace(0, 20, 2 * 10 ** 5 + 1)
 
     print('temp:', temp)
 
     spin_up = []
-    biases = np.linspace(-0.3, 0.3, 50)
+    biases = np.linspace(-0.3, 0.3, 20)
     # performing numerical calculation
     for hA in tqdm(biases, desc="h", ncols=80):
         h = [hA, 0]  # [0.05]

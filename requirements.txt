@@ -1,8 +1,10 @@
 numpy
 pandas
+xlrd
 scipy
 matplotlib
-cython
-dimod
-# dwave-ocean-sdk
+jupyterlab
+qutip
+tqdm
+dwave-ocean-sdk
 

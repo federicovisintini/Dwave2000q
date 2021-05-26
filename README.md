@@ -1,5 +1,10 @@
 # Dwave2000q
 
+DISCLAMER:
+this code is still in development and far from finished.
+For any problem open an issue or email directly the author.
+If you want to contribute see the [Contributing](#contributing) section below.
+
 This project gathers the code I'm using for
 my masther thesis on quantum computing.
 
@@ -54,6 +59,10 @@ Steps to setup your project locally
 ## Usage
 Description of the notebook and scripts in the `code/` folder.
 
+Code which uses QPU time is commented so whole scrips / notebooks
+can be run whithout worrying. Code which takes a long time to execute
+is decleared in comments / md.
+
 To run the notebooks (**.ipynb*) you will need to use jupyter;
 open the terminal (activate the venv if you created it) and type:
 ```bash
@@ -61,6 +70,51 @@ $ jupyter notebook
 ```
 
 #### Single qubit temperature (*python notebook*)
+This first notebook introduces the machine hamiltonian,
+plotting the annealing functions *A(s)* and *B(s)*.
+
+We tries to evaluate the thermalisazion of a single qubit
+in two different methods:
+
+1. We let the spin evolve in the idling channel in the final 
+   state of the anneal, or said another way
+   we initialise the spin in the first excited state and let it decay
+   (this method fails);
+   
+2. Taking inspiration from the official documentation 
+   we measure the temperature assuming classical Boltzamnn distribution
+   as final state (good result but using perhabs an oversimplifing assumption).
+   
+![Alt text](images/temperature_fit.png?raw=true)
+   
+Finally we inquire the presence of entanglement for some two-qubit state
+that could be created in the machine.
+
+#### Analitic model (*python notebook*)
+In this notebook we focus our effort to find a microscopic model
+that can describe the spin-enviroment interaction through
+a Lindblad Master Equation.
+![Alt text](images/lindblad_equation.png?raw=true)
+
+
+A Python script has been introduced to parallelise and speed up
+computation.
+We introduce also QuTiP a python module to simulate quantum systems.
+
+We then start focusing on the two-qubit thermalization,
+performing an experiment and numerically computing the concurrece
+(entanglement measure) at all points during the anneal.
+![Alt text](images/concurrence.png?raw=true)
+
+#### Two temperature simulation / plot (*python scripts*)
+First thing we convert the result of two-qubit experiment to a more usable
+form using *2_save_results.py*
+
+Then we focus on generalizing the single spin Lindblad Master Equation
+to a general case of n-qubits interacting, in *2_two_temperature_simulation.py*.
+
+Finally the script *2_two_temperatures_simulation.py* plot said results.
+![Alt text](images/2_qubits_temperature.png?raw=true)
 
 
 ## References
@@ -87,7 +141,7 @@ This work takes inspiration from:
   
 ## Acknowledgments
 I would like to thank my thesis advisors *Vittorio Giovannetti* and *Michele Campisi*
-for the guidance and motivation that allowed me to complete this project.
+for the guidance and motivation through this project.
 
 ## Contributing
 Pull requests are welcome.
