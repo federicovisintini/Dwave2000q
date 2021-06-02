@@ -6,7 +6,7 @@ from settings import DATA_DIR
 from dwave.system import DWaveSampler
 
 
-def energy_state(qubits, biases, couplings):
+def energy_state(qubits: list, biases: list, couplings):
     """
     Computes the energy of a Ising problem; given spins, biases and couplings.
 
@@ -39,10 +39,9 @@ def single_qubit_sample(num_reads, annealing_t, offsets):
     list_json = []
 
     for h in offsets:
-        name = "1 qubit"
         linear_offsets = {active_node: h * random.choice([-1, 1]) for active_node in sampler.nodelist}
         sampleset = sampler.sample_ising(linear_offsets, {}, num_reads=num_reads,
-                                         annealing_time=annealing_t, auto_scale=False, label=f'1 qubit, h={h}')
+                                         annealing_time=annealing_t, auto_scale=False, label=f'1, h={h:.3f}')
 
         energy_p = energy_state([1], [h], {})
         energy_m = energy_state([-1], [h], {})
@@ -52,10 +51,10 @@ def single_qubit_sample(num_reads, annealing_t, offsets):
         pop_m = 0
         for record in sampleset.record:
             result_qubits = record[0]
-            num_occurrences = record[3]
+            num_occurrences = record[2]
             for j, node in enumerate(linear_offsets):
                 # evaluate problem experimental solution
-                actual_energy = energy_state(result_qubits[j], [linear_offsets[node]], {})
+                actual_energy = energy_state([result_qubits[j]], [linear_offsets[node]], {})
                 if math.isclose(actual_energy, energy_p):
                     pop_p += num_occurrences
                 elif math.isclose(actual_energy, energy_m):
@@ -64,12 +63,13 @@ def single_qubit_sample(num_reads, annealing_t, offsets):
                     print('Qualcosa non va')
 
         states = {
-            (1): pop_p,
-            (-1): pop_m
+            'p': int(pop_p),
+            'm': int(pop_m)
         }
 
         obj = {
-            "name": name,
+            "num_qubits": 1,
+            "annealing_time": annealing_t,
             "linear_offsets": [h],
             "quadratic_couplings": {},
             "states": states,
@@ -87,21 +87,29 @@ def double_qubits_sample(num_reads, annealing_t, offsets, hB, J):
     connections = [(n, n + 4) for n in sampler.nodelist if (n % 8 < 4) and (n, n + 4) in sampler.edgelist]
     quadratic_coupling = {active_coupler: J for active_coupler in connections}
 
+    active_nodelist = []
+    for q1, q2 in quadratic_coupling:
+        active_nodelist.append(q1)
+        active_nodelist.append(q2)
+
+    sorted_nodelist = sorted(active_nodelist)
+
     for h in offsets:
-        name = f"2 qubits, J={J}, hB ={hB}"
+        name = f"2 qubits, J={J}, hB ={hB}, time={annealing_t}"
         linear_offsets = {}
         for a, b in connections:
-            linear_offsets[a] = h * random.choice([-1, 1])
-            linear_offsets[b] = hB
+            randsign = random.choice([-1, 1])
+            linear_offsets[a] = h * randsign
+            linear_offsets[b] = hB * randsign
 
         sampleset = sampler.sample_ising(linear_offsets, quadratic_coupling, num_reads=num_reads,
                                          annealing_time=annealing_t, auto_scale=False,
-                                         label=f'2 qubits, hA={h}, hB={hB}, J={J}')
+                                         label=f'2, hA={h:.3f}, hB={hB}, J={J}')
 
-        energy_pp = energy_state([1, 1], [h], quadratic_coupling)
-        energy_pm = energy_state([1, -1], [h], quadratic_coupling)
-        energy_mp = energy_state([-1, 1], [h], quadratic_coupling)
-        energy_mm = energy_state([-1, -1], [h], quadratic_coupling)
+        energy_pp = energy_state([1, 1], [h, hB], {(0, 1): J})
+        energy_pm = energy_state([1, -1], [h, hB], {(0, 1): J})
+        energy_mp = energy_state([-1, 1], [h, hB], {(0, 1): J})
+        energy_mm = energy_state([-1, -1], [h, hB], {(0, 1): J})
 
         # ground state pop
         pop_pp = 0
@@ -110,14 +118,15 @@ def double_qubits_sample(num_reads, annealing_t, offsets, hB, J):
         pop_mm = 0
         for record in sampleset.record:
             result_qubits = record[0]
-            num_occurrences = record[3]
+            num_occurrences = record[2]
+
             for q1, q2 in quadratic_coupling:
                 # evaluate problem experimental solution
-                pos_q1 = sampler.nodelist.index(q1)
-                pos_q2 = sampler.nodelist.index(q2)
+                pos_q1 = sorted_nodelist.index(q1)
+                pos_q2 = sorted_nodelist.index(q2)
                 qubits_tmp = [result_qubits[pos_q1], result_qubits[pos_q2]]
                 biases_tmp = [linear_offsets[q1], linear_offsets[q2]]
-                coupling_tmp = {(q1, q2): quadratic_coupling[(q1, q2)]}
+                coupling_tmp = {(0, 1): quadratic_coupling[(q1, q2)]}
 
                 actual_energy = energy_state(qubits_tmp, biases_tmp, coupling_tmp)
 
@@ -133,16 +142,17 @@ def double_qubits_sample(num_reads, annealing_t, offsets, hB, J):
                     print('Qualcosa non va')
 
         states = {
-            (1, 1): pop_pp,
-            (1, -1): pop_pm,
-            (-1, 1): pop_mp,
-            (-1, -1): pop_mm
+            'pp': int(pop_pp),
+            'pm': int(pop_pm),
+            'mp': int(pop_mp),
+            'mm': int(pop_mm)
         }
 
         obj = {
-            "name": name,
+            "num_qubits": 2,
+            "annealing_time": annealing_t,
             "linear_offsets": [h, hB],
-            "quadratic_couplings": {J},
+            "quadratic_couplings": {'01': J},
             "states": states,
         }
 
@@ -154,13 +164,13 @@ def double_qubits_sample(num_reads, annealing_t, offsets, hB, J):
 if __name__ == '__main__':
     num_different_h = 30
     num_qubit_reads = 50
-    annealing_time = 2  # mu s
+    annealing_time = 5  # mu s
     x = np.linspace(-1, 1, num_different_h)
     hA = (x ** 3 + x) / 5
 
     # possible values of hB and J
-    hB_values = []
-    J_values = []
+    hB_values = [0, 0.1]
+    J_values = [1, 0.1, 0.01]
 
     data = single_qubit_sample(num_qubit_reads, annealing_time, hA)
 
