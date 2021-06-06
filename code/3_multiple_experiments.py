@@ -62,17 +62,13 @@ def single_qubit_sample(num_reads, annealing_t, offsets):
                 else:
                     print('Qualcosa non va')
 
-        states = {
-            'p': int(pop_p),
-            'm': int(pop_m)
-        }
-
         obj = {
-            "num_qubits": 1,
+            "name": "1 qubit",
             "annealing_time": annealing_t,
-            "linear_offsets": [h],
-            "quadratic_couplings": {},
-            "states": states,
+            "hA": h,
+            "hB": 0,
+            "J": 0,
+            "states": [int(pop_p), int(pop_m)],
         }
 
         list_json.append(obj)
@@ -80,7 +76,7 @@ def single_qubit_sample(num_reads, annealing_t, offsets):
     return list_json
 
 
-def double_qubits_sample(num_reads, annealing_t, offsets, hB, J):
+def double_qubits_sample(num_reads, annealing_t, offsets, hB, J, name):
     sampler = DWaveSampler(solver='DW_2000Q_6')
     list_json = []
 
@@ -95,7 +91,6 @@ def double_qubits_sample(num_reads, annealing_t, offsets, hB, J):
     sorted_nodelist = sorted(active_nodelist)
 
     for h in offsets:
-        name = f"2 qubits, J={J}, hB ={hB}, time={annealing_t}"
         linear_offsets = {}
         for a, b in connections:
             randsign = random.choice([-1, 1])
@@ -141,19 +136,13 @@ def double_qubits_sample(num_reads, annealing_t, offsets, hB, J):
                 else:
                     print('Qualcosa non va')
 
-        states = {
-            'pp': int(pop_pp),
-            'pm': int(pop_pm),
-            'mp': int(pop_mp),
-            'mm': int(pop_mm)
-        }
-
         obj = {
-            "num_qubits": 2,
+            "name": name,
             "annealing_time": annealing_t,
-            "linear_offsets": [h, hB],
-            "quadratic_couplings": {'01': J},
-            "states": states,
+            "hA": h,
+            "hB": hB,
+            "J": J,
+            "states": [int(pop_pp), int(pop_pm), int(pop_mp), int(pop_mm)],
         }
 
         list_json.append(obj)
@@ -169,14 +158,14 @@ if __name__ == '__main__':
     hA = (x ** 3 + x) / 5
 
     # possible values of hB and J
-    hB_values = [0, 0.1]
-    J_values = [1, 0.1, 0.01]
+    names = ["J=0.2", "J=1", "hB=0.1"]
+    hB_values = [0, 0, 0.1]
+    J_values = [0.2, 1, 1]
 
     data = single_qubit_sample(num_qubit_reads, annealing_time, hA)
 
-    for hB_2 in hB_values:
-        for J_2 in J_values:
-            data += double_qubits_sample(num_qubit_reads, annealing_time, hA, hB_2, J_2)
+    for hB_2, J_2, name in zip(hB_values, J_values, names):
+        data += double_qubits_sample(num_qubit_reads, annealing_time, hA, hB_2, J_2, name)
 
     with open(DATA_DIR / 'multiple_experiments.json', 'w') as fp:
         json.dump(data, fp, indent=4)
