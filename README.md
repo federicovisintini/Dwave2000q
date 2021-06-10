@@ -84,7 +84,8 @@ in two different methods:
 2. Taking inspiration from the official documentation 
    we measure the temperature assuming classical Boltzamnn distribution
    as final state (good result but using perhabs an oversimplifing assumption)
-   <img src="images/temperature_fit.png" width="480">
+   
+<img src="images/temperature_fit.png" width="480">
    
 Finally, we inquire the presence of entanglement for some two-qubit state
 that could be created in the machine.
@@ -93,6 +94,7 @@ that could be created in the machine.
 In this notebook we focus our effort to find a microscopic model
 that can describe the spin-enviroment interaction through
 a Lindblad Master Equation.
+
 <img src="images/lindblad_equation.png" width="480">
 
 
@@ -103,6 +105,7 @@ We introduce also QuTiP a python module to simulate quantum systems.
 We then start focusing on the two-qubit thermalization,
 performing an experiment and numerically computing the concurrece
 (entanglement measure) at all points during the annealling.
+
 <img src="images/concurrence.png" width="480">
 
 
@@ -114,6 +117,7 @@ Then we focus on generalizing the single spin Lindblad Master Equation
 to a general case of n-qubits interacting, in *2_two_temperature_simulation.py*.
 
 Finally, the script *2_two_temperatures_simulation.py* plot said results.
+
 <img src="images/2_qubits_temperature.png" width="480">
 
 
