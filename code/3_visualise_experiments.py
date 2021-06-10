@@ -1,9 +1,14 @@
 import numpy as np
 import json
-# import scipy.interpolate
+import scipy.interpolate
 import matplotlib.pyplot as plt
 from settings import DATA_DIR
 
+temperatures = [14.0, 14.2, 14.4, 14.6, 14.8, 15.0, 15.2]
+k2s = [0.006, 0.008, 0.012, 0.020, 0.028]
+
+temp_plot = 14.2
+k2_plot = 0.012
 
 cname = {
     "1 qubit": 'C0',
@@ -12,10 +17,29 @@ cname = {
     "hB=0.1": 'C3'
 }
 
+err_sum1 = 10
+err_sum2 = 10
+interpolate = False
+logscale = True
 
-def expected_population(sim_, T, k2, name):
+# EXPERIMENTS
+
+with open(DATA_DIR / "multiple_experiments.json", "r") as read_file:
+    data = json.load(read_file)
+
+files = [x for x in DATA_DIR.glob('multiple_experiments_simulation_T*_k*.json') if x.is_file()]
+simulations_glob_list = []
+for file in files:
+    with open(file, 'r') as fp:
+        simulations_glob_list += json.load(fp)
+
+name1 = "1 qubit"
+names_2 = ['hB=0.1', 'J=0.2', 'J=1']
+
+
+def expected_population(T, k2, name_):
     # load simulation w a given temperature and coupling
-    simulation = [obj for obj in sim_ if obj["T"] == T and obj["k2"] == k2 and obj["name"] == name]
+    simulation = [obj for obj in simulations_glob_list if obj["T"] == T and obj["k2"] == k2 and obj["name"] == name_]
 
     # select which curve to sample and compute its density matrix
     # rho_list = [np.array(obj["rho_real"]) + 1j * np.array(obj["rho_imag"]) for obj in simulation]
@@ -30,7 +54,7 @@ def expected_population(sim_, T, k2, name):
     vector_mp = np.kron(vector_m, vector_p)
     vector_mm = np.kron(vector_m, vector_m)
 
-    if name == "1 qubit":
+    if name_ == name1:
         oss_p = np.array([np.linalg.multi_dot([vector_p, rho, vector_p]) for rho in rho_list])
         oss_m = np.array([np.linalg.multi_dot([vector_m, rho, vector_m]) for rho in rho_list])
 
@@ -44,151 +68,223 @@ def expected_population(sim_, T, k2, name):
     return oss_pp, oss_pm, oss_mp, oss_mm
 
 
-def chi2(sim_, T, k2, name, state_list):
+def chi2(T, k2, name_, state_list):
 
-    if name == "1 qubit":
-        oss_p, oss_m = expected_population(sim_, T, k2, name)
+    if name_ == name1:
+        exp_p, exp_m = expected_population(T, k2, name_)
 
-        exp_p = state_list[0]
-        exp_m = state_list[1]
-        num = exp_p + exp_m
-        dexp_p = np.sqrt((1 + exp_p * (num - exp_p)) / num ** 3)
-        dexp_m = np.sqrt((1 + exp_m * (num - exp_m)) / num ** 3)
+        oss_p = state_list[0]
+        oss_m = state_list[1]
+        num = oss_p + oss_m
 
-        chi2_p = (oss_p - exp_p) ** 2 / dexp_p ** 2
-        chi2_m = (oss_m - exp_m) ** 2 / dexp_m ** 2
+        chi2_p = (oss_p - exp_p * num) ** 2 / (exp_p * num)
+        chi2_m = (oss_m - exp_m * num) ** 2 / (exp_m * num)
 
-        return chi2_p, chi2_m
+        # return np.sum(chi2_p), np.sum(chi2_m)
+        return np.sum(chi2_m)
 
-    oss_pp, oss_pm, oss_mp, oss_mm = expected_population(sim_, T, k2, name)
+    exp_pp, exp_pm, exp_mp, exp_mm = expected_population(T, k2, name_)
 
-    exp_pp = state_list[0]
-    exp_pm = state_list[1]
-    exp_mp = state_list[2]
-    exp_mm = state_list[3]
-    num = exp_pp + exp_pm + exp_mp + exp_mm
-    dexp_pp = np.sqrt((1 + exp_pp * (num - exp_pp)) / num ** 3)
-    dexp_pm = np.sqrt((1 + exp_pm * (num - exp_pm)) / num ** 3)
-    dexp_mp = np.sqrt((1 + exp_mp * (num - exp_mp)) / num ** 3)
-    dexp_mm = np.sqrt((1 + exp_mm * (num - exp_mm)) / num ** 3)
+    oss_pp = state_list[0]
+    oss_pm = state_list[1]
+    oss_mp = state_list[2]
+    oss_mm = state_list[3]
+    num = oss_pp + oss_pm + oss_mp + oss_mm
 
-    chi2_pp = (oss_pp - exp_pp) ** 2 / dexp_pp ** 2
-    chi2_pm = (oss_pm - exp_pm) ** 2 / dexp_pm ** 2
-    chi2_mp = (oss_mp - exp_mp) ** 2 / dexp_mp ** 2
-    chi2_mm = (oss_mm - exp_mm) ** 2 / dexp_mm ** 2
+    chi2_pp = (oss_pp - exp_pp * num) ** 2 / (exp_pp * num)
+    chi2_pm = (oss_pm - exp_pm * num) ** 2 / (exp_pm * num)
+    chi2_mp = (oss_mp - exp_mp * num) ** 2 / (exp_mp * num)
+    chi2_mm = (oss_mm - exp_mm * num) ** 2 / (exp_mm * num)
+    chi2_fig = ((oss_mp + oss_mm) - (exp_mp + exp_mm) * num) ** 2 / ((exp_mp + exp_mm) * num)
 
-    return chi2_pp, chi2_pm, chi2_mp, chi2_mm
+    # return np.sum(chi2_pp), np.sum(chi2_pm), np.sum(chi2_mp), np.sum(chi2_mm)
+    return np.sum(chi2_fig)
 
 
-def plot(sim_, T, k2):
-    names_ = list(set([obj["name"] for obj in sim_]))
-    for name in names_:
-        if name == "1 qubit":
-            oss_p, oss_m = expected_population(sim_, T, k2, name)
-            fig_merit = oss_m
-        else:
-            oss_pp, oss_pm, oss_mp, oss_mm = expected_population(sim_, T, k2, name)
-            fig_merit = oss_mp + oss_mm
-
-            h = [obj["hA"] for obj in sim_ if obj["T"] == T and obj["k2"] == k2 and obj["name"] == name]
-            plt.plot(h, oss_mp, color=cname[name], alpha=0.5, linestyle='--')
-            plt.plot(h, oss_mm, color=cname[name], alpha=0.5, linestyle='-.')
-
-        h = [obj["hA"] for obj in sim_ if obj["T"] == T and obj["k2"] == k2 and obj["name"] == name]
-        plt.plot(h, fig_merit, color=cname[name])
-
-        # funct = scipy.interpolate.CubicSpline(h, fig_merit)
-        # x = np.linspace(min(h), max(h), 1000)
-        # plt.plot(x, funct(x), label=f"T={T}, k2={k2}")
-
+def plot_simulation(T, k2, alpha=1.):
+    plt.figure("main")
     plt.title(f"T={T}, k2={k2}")
+
+    # 1 qubit plot
+    oss_p, oss_m = expected_population(T, k2, name1)
+    fig_merit = oss_m
+
+    h = [obj["hA"] for obj in simulations_glob_list if obj["T"] == T and obj["k2"] == k2 and obj["name"] == name1]
+    if interpolate:
+        funct = scipy.interpolate.CubicSpline(h, fig_merit)
+        x = np.linspace(min(h), max(h), 1000)
+        plt.plot(x, funct(x), color=cname[name1])
+    else:
+        plt.plot(h, fig_merit, color=cname[name1])
+
+    # residui
+    state_p_, state_m_ = state_population(name1)
+    num_samplings_ = state_p_ + state_m_
+    fig_merit_data = state_m_ / num_samplings_
+    std_ = np.sqrt((err_sum1 ** 2 + state_m_ * (num_samplings_ - state_m_)) / num_samplings_ ** 3)
+
+    plt.figure("residui")
+    plt.plot(h, fig_merit - fig_merit_data, color=cname[name1], marker='.',
+                 linestyle='--', label=name1 + f" | {T}, {k2}", alpha=alpha)
+    plt.title(f"T={T}, k2={k2}")
+    plt.plot(h, np.zeros(len(h)), linestyle='--', color='black')
+
+    # 2 qubit plot
+    for name_ in names_2:
+        oss_pp, oss_pm, oss_mp, oss_mm = expected_population(T, k2, name_)
+        fig_merit = oss_mp + oss_mm
+
+        plt.figure("main")
+        h = [obj["hA"] for obj in simulations_glob_list if obj["T"] == T and obj["k2"] == k2 and obj["name"] == name_]
+        if interpolate:
+            funct = scipy.interpolate.CubicSpline(h, fig_merit)
+            x = np.linspace(min(h), max(h), 1000)
+            plt.plot(x, funct(x), color=cname[name_])
+        else:
+            plt.plot(h, fig_merit, color=cname[name_])
+
+        # components
+        plt.plot(h, oss_mp, color=cname[name_], alpha=0.5, linestyle='--')
+        plt.plot(h, oss_mm, color=cname[name_], alpha=0.5, linestyle='-.')
+
+        # residui
+        state_pp_, state_pm_, state_mp_, state_mm_ = state_population(name_)
+        num_samplings_ = state_pp_ + state_pm_ + state_mp_ + state_mm_
+        fig_merit_data = (state_mp_ + state_mm_) / num_samplings_
+        std_ = np.sqrt(err_sum2 ** 2 / num_samplings_ ** 3 + fig_merit_data * (1 - fig_merit_data) / num_samplings_)
+
+        plt.figure("residui")
+        plt.plot(h, fig_merit - fig_merit_data, color=cname[name_], marker='.',
+                     linestyle='--', label=name_ + f" | {T}, {k2}", alpha=alpha)
 
     return
 
 
-# EXPERIMENTS
+def state_population(name_):
+    actual_states = np.array([obj["states"] for obj in data if obj["name"] == name_])
 
-with open(DATA_DIR / "multiple_experiments.json", "r") as read_file:
-    data = json.load(read_file)
+    if name_ == name1:
+        actual_state_p = actual_states[:, 0]
+        actual_state_m = actual_states[:, 1]
 
-p = DATA_DIR.glob('multiple_experiments_simulation_T*_k*.json')
-files = [x for x in p if x.is_file()]
-sim = []
-for file in files:
-    with open(file, 'r') as fp:
-        sim += json.load(fp)
+        return actual_state_p, actual_state_m
 
-names_2 = list(set([obj["name"] for obj in data]))
-names_2.remove("1 qubit")
+    actual_state_pp = actual_states[:, 0]
+    actual_state_pm = actual_states[:, 1]
+    actual_state_mp = actual_states[:, 2]
+    actual_state_mm = actual_states[:, 3]
 
-plt.figure()
+    return actual_state_pp, actual_state_pm, actual_state_mp, actual_state_mm
 
-# 1 qubit
-data1 = [obj for obj in data if obj["name"] == "1 qubit"]
 
-x1 = np.array([obj["hA"] for obj in data1])
-states = np.array([obj["states"] for obj in data1])
-
-state_p = states[:, 0]
-state_m = states[:, 1]
+# plot 1 qubit
+x1 = [obj["hA"] for obj in data if obj["name"] == name1]
+state_p, state_m = state_population(name1)
 
 down1 = state_m / (state_p + state_m)
-std1 = np.sqrt(state_p * state_m / (state_m + state_p) ** 3)
+std1 = np.sqrt((err_sum1 ** 2 + state_p * state_m) / (state_m + state_p) ** 3)
+
+plt.figure("main")
 plt.errorbar(x1, down1, std1, color=cname["1 qubit"], marker='.', linestyle='', label='1 qubit')
 
-# 2 qubits
-for name_obj in names_2:
-    data2 = [obj for obj in data if obj["name"] == name_obj]
+# plot 2 qubits
+for name in names_2:
+    data2 = [obj for obj in data if obj["name"] == name]
 
     x2 = np.array([obj["hA"] for obj in data2])
     hB = np.array([obj["hB"] for obj in data2])
     J = np.array([obj["J"] for obj in data2])
 
-    states = np.array([obj["states"] for obj in data2])
-
-    state_pp = states[:, 0]
-    state_pm = states[:, 1]
-    state_mp = states[:, 2]
-    state_mm = states[:, 3]
+    state_pp, state_pm, state_mp, state_mm = state_population(name)
 
     num_samplings = state_pp + state_pm + state_mp + state_mm
     down = (state_mp + state_mm) / num_samplings
-    std = np.sqrt(state_mm * (num_samplings - state_mm) / num_samplings ** 3)
+    std = np.sqrt(err_sum2 ** 2 / num_samplings ** 3 + down * (1 - down) / num_samplings)
 
-    plt.errorbar(x2, down, std, color=cname[name_obj], marker='.', linestyle='', label=f'hB={hB[0]}, J={J[0]}')
+    plt.figure("main")
+    plt.errorbar(x2, down, std, color=cname[name], marker='.', linestyle='', label=f'hB={hB[0]}, J={J[0]}')
 
-plot(sim, 14.0, 0.03)
+# plot
+# plot_simulation(T=temp_plot, k2=k2_plot, alpha=1)
 
+plt.figure("main")
 plt.xlabel('hA')
 plt.ylabel('spin A is up')
 plt.legend()
 
+plt.figure("residui")
+plt.xlabel('hA')
+plt.ylabel('spin A is up - residui')
+plt.legend()
+
 # chi2
-temperatures = [13.7, 13.9, 14.1]
-k2s = [0.01, 0.03, 0.06]
 X, Y = np.meshgrid(temperatures, k2s)
-Z = np.zeros_like(X)
+Z = np.ma.array(np.empty_like(X))
+Z0 = np.ma.array(np.empty_like(X))
+Z1 = np.ma.array(np.empty_like(X))
+Z2 = np.ma.array(np.empty_like(X))
 
 for i, x in enumerate(temperatures):
     for j, y in enumerate(k2s):
-        # 1 qubit
-        states = np.array([obj["states"] for obj in data if obj["name"] == "1 qubit"])
-        state_list1 = [states[:, 0], states[:, 1]]
-        Z[j, i] += np.sum(chi2(sim, x, y, "1 qubit", state_list1))
+        try:
+            Z[j, i] = chi2(x, y, name1, state_population(name1)) / 29
+        except ValueError as e:
+            Z[j, i] = np.ma.masked
 
-        # 2 qubits
-        for name_obj in names_2:
-            states = np.array([obj["states"] for obj in data if obj["name"] == name_obj])
-            state_list2 = [states[:, 0], states[:, 1], states[:, 2], states[:, 3]]
-            Z[j, i] += np.sum(chi2(sim, x, y, name_obj, state_list2))
-        Z[j, i] = np.random.random()
+        try:
+            Z0[j, i] = chi2(x, y, names_2[0], state_population(names_2[0])) / 29
+            Z1[j, i] = chi2(x, y, names_2[1], state_population(names_2[1])) / 29
+            Z2[j, i] = chi2(x, y, names_2[2], state_population(names_2[2])) / 29
+        except ValueError:
+            Z0[j, i] = np.ma.masked
+            Z1[j, i] = np.ma.masked
+            Z2[j, i] = np.ma.masked
 
-plt.figure("chi2")
-plt.pcolormesh(X, Y, Z, shading='nearest')  # shading='gouraud'
-plt.colorbar()
-
+# sum chi2
+Zsum = (Z + Z0 + Z1 + Z2) / 4
+plt.figure("chi2 sum")
+plt.title('Chi^2 ridotto medio')
 plt.xlabel('T')
 plt.ylabel('k2')
-plt.title('Chi^2')
+plt.pcolormesh(X, Y, Zsum, shading='nearest')  # shading='gouraud'
+plt.colorbar()
+if logscale:
+    plt.yscale('log')
+
+# multiple chi2
+plt.figure("chi2 multiple")
+plt.title('Chi^2 ridotto')
+
+plt.subplot(221)
+plt.pcolormesh(X, Y, Z, shading='nearest')  # shading='gouraud'
+plt.title('1 qubit')
+plt.ylabel('k2')
+plt.colorbar()
+if logscale:
+    plt.yscale('log')
+
+plt.subplot(222)
+plt.pcolormesh(X, Y, Z0, shading='nearest')  # shading='gouraud'
+plt.title(names_2[0])
+plt.colorbar()
+if logscale:
+    plt.yscale('log')
+
+plt.subplot(223)
+plt.pcolormesh(X, Y, Z1, shading='nearest')  # shading='gouraud'
+plt.title(names_2[1])
+plt.xlabel('T')
+plt.ylabel('k2')
+plt.colorbar()
+if logscale:
+    plt.yscale('log')
+
+plt.subplot(224)
+plt.pcolormesh(X, Y, Z2, shading='nearest')  # shading='gouraud'
+plt.title(names_2[2])
+plt.xlabel('T')
+plt.colorbar()
+if logscale:
+    plt.yscale('log')
 
 plt.show()

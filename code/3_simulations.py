@@ -8,11 +8,14 @@ import json
 from settings import DATA_DIR
 
 # PARAMETERS
-temp = 14.0
-k2 = 0.03
+temp = 14.0  # [14.0, 14.2, 14.4, 14.6, 14.8, 15.0, 15.2]
+k2 = 0.04  # [0.005, 0.006, 0.008, 0.012, 0.020, 0.028, 0.04]
 omega_c = 8 * np.pi
 
 benchmark = False
+simulation_1_qubit = True
+simulation_2_qubits = True
+save_result = True
 
 # definitions
 beta = 47.9924341590788 / temp
@@ -69,7 +72,7 @@ def liovillian2(t, y):
     p = y.reshape(4, 4)
 
     ham = A(t) * (np.kron(np.eye(2), sigmax) + np.kron(sigmax, np.eye(2))) / 2
-    ham += B(t) * hA * np.kron(sigmaz, np.eye(2)) / 2
+    ham += B(t) * h * np.kron(sigmaz, np.eye(2)) / 2
     ham += B(t) * hB * np.kron(np.eye(2), sigmaz) / 2
     ham += B(t) * J * np.kron(sigmaz, sigmaz) / 2
 
@@ -100,20 +103,20 @@ def liovillian2(t, y):
 
 
 if benchmark:
-    hA = 0.1
+    h = 0.01
     hB = 0
     J = 1
     # 2 qubits simulation
     tic = time.time()
     rho0 = np.ones(16, dtype=complex) / 4
-    solution = ode.solve_ivp(fun=liovillian2, t_span=(0, 500), y0=rho0)
+    solution = ode.solve_ivp(fun=liovillian2, t_span=(0, 5000), y0=rho0, method='RK45')
     final_rho = solution.y[:, -1].reshape(4, 4)
     toc = time.time()
 
     print(solution.message)
     print(f"Elapsed time: {toc-tic:.2f} seconds")
     print("Final time of integration:", solution.t[-1])
-    print(final_rho)
+    print(final_rho.real)
 
 
 # problem biases and couplings
@@ -130,50 +133,53 @@ print(f'T: {temp}')
 print(f'k2: {k2}\n')
 
 # 1 qubit simulation
-print(f"Name: '1 qubit'")
-rho0 = np.ones(4, dtype=complex) / 2
-
-# performing numerical calculation: state evolution and obj write
-for h in tqdm(hA, desc="h", ncols=80):
-    solution = ode.solve_ivp(fun=liovillian1, t_span=(0, 5000), y0=rho0)
-    rho = solution.y[:, -1].reshape(2, 2)
-
-    obj = {
-        "T": temp,
-        "k2": k2,
-        "name": "1 qubit",
-        "hA": h,
-        "hB": 0,
-        "J": 0,
-        "rho_real": rho.real.tolist(),
-        "rho_imag": rho.imag.tolist()
-    }
-    data.append(obj)
-
-
-# 2 qubit simulation
-for name, hB, J in zip(names, hB_values, J0_values):
-    print(f"Name: '{name}'")
-    rho0 = np.ones(16, dtype=complex) / 4
+if simulation_1_qubit:
+    print(f"Name: '1 qubit'")
+    rho0 = np.ones(4, dtype=complex) / 2
 
     # performing numerical calculation: state evolution and obj write
     for h in tqdm(hA, desc="h", ncols=80):
-        # solution = ode.solve_ivp(fun=liovillian1, t_span=(0, 5000), y0=rho0)
-        # rho = solution.y[:, -1].reshape(4, 4)
-        rho = rho0.reshape(4, 4)
+        solution = ode.solve_ivp(fun=liovillian1, t_span=(0, 5000), y0=rho0, method='RK23')
+        rho = solution.y[:, -1].reshape(2, 2)
 
         obj = {
             "T": temp,
             "k2": k2,
-            "name": name,
+            "name": "1 qubit",
             "hA": h,
-            "hB": hB,
-            "J": J,
+            "hB": 0,
+            "J": 0,
             "rho_real": rho.real.tolist(),
             "rho_imag": rho.imag.tolist()
         }
         data.append(obj)
 
+
+# 2 qubit simulation
+if simulation_2_qubits:
+    for name, hB, J in zip(names, hB_values, J0_values):
+        print(f"Name: '{name}'")
+        rho0 = np.ones(16, dtype=complex) / 4
+
+        # performing numerical calculation: state evolution and obj write
+        for h in tqdm(hA, desc="h", ncols=80):
+            solution = ode.solve_ivp(fun=liovillian2, t_span=(0, 5000), y0=rho0, method='RK23')
+            rho = solution.y[:, -1].reshape(4, 4)
+            # rho = rho0.reshape(4, 4)
+
+            obj = {
+                "T": temp,
+                "k2": k2,
+                "name": name,
+                "hA": h,
+                "hB": hB,
+                "J": J,
+                "rho_real": rho.real.tolist(),
+                "rho_imag": rho.imag.tolist()
+            }
+            data.append(obj)
+
 # save results on file
-with open(DATA_DIR / f'multiple_experiments_simulation_T{temp}_k{k2}.json', 'w') as fp:
-    json.dump(data, fp, indent=4)
+if save_result:
+    with open(DATA_DIR / f'multiple_experiments_simulation_T{temp}_k{k2}.json', 'w') as fp:
+        json.dump(data, fp, indent=4)
