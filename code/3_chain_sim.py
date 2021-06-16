@@ -7,7 +7,9 @@ import pickle
 from settings import DATA_DIR
 
 # PARAMETERS
-k2 = 0.066  # [0.005, 0.006, 0.008, 0.012, 0.020, 0.028]
+k2 = 0.6
+s_bar = 0.8  # [0.65, 0.7, 0.75, 0.8]
+temp = 1
 omega_c = 8 * np.pi
 benchmark = False
 
@@ -19,7 +21,6 @@ df = pd.read_excel('../09-1216A-A_DW_2000Q_6_annealing_schedule.xls', sheet_name
 A = scipy.interpolate.CubicSpline(df['s'], df['A(s) (GHz)'])
 B = scipy.interpolate.CubicSpline(df['s'], df['B(s) (GHz)'])
 h = 1
-s_bar = 0.8
 
 
 def t_to_s(t):
@@ -32,9 +33,12 @@ def t_to_s(t):
 def gamma(omega):
     """ Lindblad rates """
     # works for omega positive and negative (satisfy detailed balance)
-    if omega > 0:
-        return 2 * np.pi * k2 * omega * np.exp(- abs(omega) / omega_c)
-    return 0
+    if temp == 0:
+        if omega > 0:
+            return 2 * np.pi * k2 * omega * np.exp(- abs(omega) / omega_c)
+        return 0
+    beta = 47.9924341590788 / temp
+    return 2 * np.pi * k2 * omega * np.exp(- abs(omega) / omega_c) / (1 - np.exp(-beta * omega))
 
 
 def dissipator_term(L, p):
@@ -103,7 +107,7 @@ else:
         mean_E.append(np.trace(rho @ sigmaz))
 
     # save results on file
-    with open(DATA_DIR / f'chain_sim_k{k2}.pkl', 'wb') as f:
+    with open(DATA_DIR / f'chain_sim_k{k2}_st{s_bar}_T{temp}.pkl', 'wb') as f:
         pickle.dump(mean_E, f)
 
     print('Saved data into ->', f.name)
