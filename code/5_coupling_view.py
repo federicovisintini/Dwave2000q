@@ -52,8 +52,8 @@ plt.legend()
 sts = np.unique([st for st, kx, kz in sim.keys()])
 kxs = np.unique([kx for st, kx, kz in sim.keys()])
 kzs = np.unique([kz for st, kx, kz in sim.keys()])
-Nx = 3  # 5
-Ny = 3  # 4
+Nx = 2  # 5
+Ny = 2  # 4
 
 X, Y = np.meshgrid(kxs, kzs)
 
@@ -76,12 +76,11 @@ for k, st in enumerate(sts):
     ax.set_title('st' + str(st))
     if logscale:
         ax.set_xscale('log')
-        ax.set_xlim((min(kxs) / 2, max(kxs) * 1.45))
-        ax.set_yscale('log')
-    if xx == (Nx-1):
-        ax.set_xlabel('kx')
-    if yy == (Ny-1):
+
+    if xx == 0:
         ax.set_ylabel('kz')
+    if yy == (Ny-1):
+        ax.set_xlabel('kx')
 
     z_min, z_max = abs(Z).min(), abs(Z).max()
     c = ax.pcolormesh(X, Y, Z, shading='nearest', cmap='RdBu', norm=LogNorm())  # z_min, z_max

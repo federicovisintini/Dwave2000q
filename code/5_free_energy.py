@@ -5,16 +5,16 @@ import scipy.stats
 from matplotlib import pyplot as plt
 from settings import ANNEALING_SCHEDULE_XLS
 
-s_init = 1
+s_init = 0.68
 s_a = 0.68
-s_b = 0.70
+s_b = 0.72
 s_fin = s_a
-h = 0.2
+h = 0.15
 
-ta = 20
-tb = 21
-tc = 60
-td = 100
+ta = 60
+tb = ta + 1
+tc = 120
+td = 180
 
 # annealing functions
 df = pd.read_excel(ANNEALING_SCHEDULE_XLS, sheet_name=1)

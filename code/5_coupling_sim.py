@@ -4,19 +4,19 @@ import scipy.interpolate
 import scipy.integrate as ode
 import time
 import pickle
+from tqdm import tqdm
 from settings import DATA_DIR, ANNEALING_SCHEDULE_XLS
 
 # PARAMETERS
-kxs = [6e-10, 2e-9, 6e-9, 1e-8, 2e-8, 3e-8, 6e-8]  # 8e-8, 1e-7, 1.3e-7, 1.6e-7, 2e-7]
-kzs = [0.001, 0.002, 0.005, 0.007, 0.01, 0.012, 0.015, 0.02, 0.025, 0.03, 0.035, 0.04]
-sts = [0.74]  # [0.60, 0.62, 0.64, 0.66, 0.68, 0.7]
+kxs = [1e-10, 2e-10, 4e-10, 8e-10, 1.5e-9, 3e-9, 6e-9, 1e-8, 2e-8]  # 10
+kzs = np.arange(0, 0.031, 0.002)  # 15
+sts = [0.72]  # [0.60, 0.64, 0.68, 0.72]  # 4
 omega_c = 8 * np.pi
 benchmark = False
 
 # definitions
 sigmax = np.array([[0, 1], [1, 0]])
 sigmaz = np.diag([1, -1])
-num_sims = len(kxs) * len(kzs) * len(sts)
 
 df = pd.read_excel(ANNEALING_SCHEDULE_XLS, sheet_name=1)
 A = scipy.interpolate.CubicSpline(df['s'], df['A(s) (GHz)'])
@@ -83,23 +83,13 @@ if benchmark:
     print(final_rho.real)
     print('Mean energy:', np.trace(final_rho @ sigmaz).real)
 else:
-    # time evaluation
-    count = 0
-    tic = time.time()
-    for s_bar in sts:
-        for kx in kxs:
-            for kz in kzs:
-                # print intro
-                print(f'\n{100 * count / num_sims:.2f} % completed')
-                print(f'{(time.time() - tic) / 60:.2f} min passed.')
-                print(f'Performing simulation with st: {s_bar}, (kx, kz): {kx, kz}')
-
+    for s_bar in tqdm(sts, desc='s*', ncols=80):
+        for kx in tqdm(kxs, desc='kx', leave=False, ncols=80):
+            for kz in tqdm(kzs, desc='kz', leave=False, ncols=80):
                 anneal_lenght = 1000 * np.linspace(5, 50, num=10)
                 mean_E = []
 
                 for time_f in anneal_lenght:
-                    # print(f"annealing time: {time_f / 1000} µs")
-
                     rho0 = np.array([1, 0, 0, 0], dtype=complex)
 
                     # performing numerical calculation: state evolution and obj write
@@ -110,6 +100,3 @@ else:
                 # save results on file
                 with open(DATA_DIR / f'coupling_sim_st{s_bar}_kx{kx}_kz{kz}.pkl', 'wb') as f:
                     pickle.dump(mean_E, f)
-
-                print('Saved data into ->', f.name)
-                count += 1
