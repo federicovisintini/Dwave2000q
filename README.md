@@ -1,7 +1,7 @@
 # Dwave2000q
 
 DISCLAMER:
-this code is still in development and far from finished.
+this code is still in development and not finished yet.
 For any problem open an issue or email directly the author.
 If you want to contribute see the [Contributing](#contributing) section below.
 
@@ -17,6 +17,12 @@ All the experiments so far run through Leap
 cloud service. The code is based on the D-Wave
 Ocean Software, documentation available
 [here](https://docs.ocean.dwavesys.com/en/latest/index.html).
+
+The code, presented in [Usage](#usage),
+follows the chronological order of writing, to help me keep track
+of the meeting with my supervisors.
+A more integral structure of the project will be available at the time of writing
+of the thesis (mid-August).
 
 ## Getting started
 Steps to set up your project locally

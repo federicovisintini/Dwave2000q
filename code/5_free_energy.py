@@ -3,18 +3,18 @@ import pandas as pd
 import scipy.interpolate
 import scipy.stats
 from matplotlib import pyplot as plt
-from settings import ANNEALING_SCHEDULE_XLS
+from settings import *
 
-s_init = 0.68
-s_a = 0.68
-s_b = 0.72
+s_init = S_LOW
+s_a = s_init
+s_b = S_HIGH
 s_fin = s_a
 h = 0.15
 
-ta = 60
+ta = TA
 tb = ta + 1
-tc = 120
-td = 180
+tc = TC
+td = TD
 
 # annealing functions
 df = pd.read_excel(ANNEALING_SCHEDULE_XLS, sheet_name=1)
@@ -104,7 +104,7 @@ plt.title('free energy vs s')
 plt.legend()
 
 plt.figure('annealing schedule')
-plt.plot([0, ta], [1, s_a], c='C0', ls='--')
+plt.plot([0, 1, ta], [1, s_a, s_a], c='C0', ls='--')
 plt.plot([td, td+1], [s_fin, 1], c='C0', ls='--')
 plt.plot([ta, tb, tc, td], [s_a, s_b, s_b, s_fin], c='C0', marker='.')
 plt.text(ta + 0.7, s_a - 0.005, 'a')
@@ -123,7 +123,7 @@ plt.ylabel('s')
 
 fig, axs = plt.subplots(2, 2)
 ax = axs[0, 0]
-ax.plot([0, ta, ta+1], [1, s_a, 1])
+ax.plot([0, 1, ta, ta+1], [1, s_a, s_a, 1])
 ax.scatter(ta, s_a)
 ax.set_ylabel('s')
 ax.set_title('measure A: $p(x_a)$')

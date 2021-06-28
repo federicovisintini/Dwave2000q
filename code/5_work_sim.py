@@ -3,27 +3,28 @@ import numpy as np
 import scipy.interpolate
 import scipy.integrate as ode
 import time
+import pickle
 import matplotlib.pyplot as plt
-from settings import ANNEALING_SCHEDULE_XLS
+from settings import *
 
 # simulation parameters
-kz = 0.02
+kz = 0.006
 omega_c = 8 * np.pi
-beta = 48 / 13.5
+beta = 48 / 13.1
 rho0 = np.array([0, 0, 0, 1], dtype=complex)
 h = 0.15
 
 # annealing schedule parameters
 ti = 1 * 1000
-ta = 30 * 1000
+ta = TA * 1000
 tb = ta + 1000
-tc = 110 * 1000
-td = 190 * 1000
+tc = TC * 1000
+td = TD * 1000
 tf = td + 1000
 
-si = 0.68
+si = S_LOW
 sa = si
-sb = 0.72
+sb = S_HIGH
 sc = sb
 sd = sa
 
@@ -128,23 +129,79 @@ plt.xlabel('time (µs)')
 plt.ylabel('s')
 
 plt.figure('work extraction process')
-plt.plot(solution.t / 1000, polarization, label=r'$<\sigma_z>$')
-# plt.plot(solution.t / 1000, energy, label='<E>')
-# plt.plot(solution.t / 1000, - hamiltonian_z, label='-B(t)')
+plt.tight_layout()
+plt.xlabel('time (µs)')
+plt.ylabel(r'$\langle \sigma_z \rangle$')
+plt.title('work exctration measures v sim')
+
+plt.plot(solution.t / 1000, polarization, label=r'Lindblad simulation with $k_z=0.006, T=13.1 mK$')
 
 gibbs_a = 2 / (1 + np.exp(beta * B(sa))) - 1
 gibbs_b = 2 / (1 + np.exp(beta * B(sb))) - 1
 
-plt.plot([0, tf / 1000], [gibbs_a, gibbs_a], ls='--')
-plt.plot([0, tf / 1000], [gibbs_b, gibbs_b], ls='--')
+plt.plot([0, tf / 1000], [gibbs_a, gibbs_a], ls='--', label=r'thermal equilibrium for T= 13.1 mK, s=' + str(S_LOW))
+plt.plot([0, tf / 1000], [gibbs_b, gibbs_b], ls='--', label=r'thermal equilibrium for T= 13.1 mK, s =' + str(S_HIGH))
 
 for t in [ti, ta, tb, tc, td]:
     plt.plot([t / 1000, t / 1000], [-1, -0.9], ls='--', c='black', alpha=0.5)
     print(f't={t/1000}µs; pol={p(t)}')
 
+# experiment
+QLp = 0.98372856442; dQLp = 0.0002698672048704348
+QLm = -0.9993189612; dQLm = 5.887529182877954e-05
+QHp = 0.99682018618; dQHp = 0.00011311457361074311
+QHm = -0.9998726114; dQHm = 2.4310899029991185e-05
+Ap = -0.92210191082; dAp = 0.000608729445379175
+Am = -0.92562959333; dAm = 0.000621892731678587
+Bp = 0.719529642332; dBp = 0.0010672755689550594
+Bm = -0.98649681528; dBm = 0.0002516637885110414
+Cp = -0.91298873101; dCp = 0.0005975171447289941
+Cm = -0.93845173934; dCm = 0.0005489863530870556
+Dp = -0.92771190592; dDp = 0.0005993388474148749
+Dm = -0.93340029397; dDm = 0.0005692088941221727
+
+
+def evolution(sigma_z, sigma_u, sigma_d):
+    # return (2 * x + measure_lm - measure_lp) / (measure_lm + measure_lp)
+    p_up = (1 + sigma_z) / 2
+    p_down = (1 - sigma_z) / 2
+
+    return p_up * sigma_u + p_down * sigma_d
+
+
+sigmaz_a = Am
+plt.errorbar(ta / 1000, sigmaz_a, dAm, fmt='o', c='red', label="sampling 'markov'")
+sigmaz_b = evolution(sigmaz_a, Bp, Bm)
+plt.errorbar(tb / 1000, sigmaz_b, dBm + dBp, fmt='o', c='red')
+sigmaz_c = evolution(sigmaz_b, Cp, Cm)
+plt.errorbar(tc / 1000, sigmaz_c, dCm + dCp, fmt='o', c='red')
+sigmaz_d = evolution(sigmaz_c, Dp, Dm)
+plt.errorbar(td / 1000, sigmaz_d, dDm + dDp, fmt='o', c='red')
+
+# naive measure
+files = [x for x in DATA_DIR.glob('work_extraction_naive0_tf*.pkl') if x.is_file()]
+anneal_schedules = []
+for file in sorted(files):
+    tf = float(file.name[25: -4])
+    with open(file, 'rb') as fp:
+        anneal_schedule, mean_spin, std_spin = pickle.load(fp)
+        anneal_schedules.append(anneal_schedule)
+    plt.errorbar(tf - 1, mean_spin, std_spin + abs(1 + mean_spin) / 100, fmt='.', c='green')
+
+plt.legend()
+
+plt.figure('anneals')
+p_wrong_ip = (1 - QLp) / 2
+for i in anneal_schedules:
+    plt.plot([x[0] for x in i], [x[1] for x in i])
+plt.title('naive measures schedule')
+plt.xlabel('time (µs)')
+plt.ylabel('s')
+
+
+# other figures
 plt.title('work extraction process')
 plt.xlabel('time (µs)')
-plt.legend()
 
 xx = np.linspace(-30, 300, 10000)
 plt.figure('integrand of S(omega)')
@@ -161,5 +218,7 @@ for i in xx:
 
 plt.figure('S(omega)')
 plt.plot(xx, yy)
+plt.xlabel('omega')
+plt.ylabel('S')
 
 plt.show()
