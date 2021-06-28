@@ -108,8 +108,8 @@ for i, (h, st) in enumerate(simulated_experiments):
     plt.errorbar(x, exp[h, st], dexp[h, st], c=c_dict[(h, st)], marker='o', ls='', label=f'h={h}, st={st}')
 
 for h, st, kz in sim.keys():
-    plt.plot(x, sim[(h, st, kz)], c=c_dict[(h, st)], ls='--')
-
+    # plt.plot(x, sim[(h, st, kz)], c=c_dict[(h, st)], ls='--')
+    pass
 
 plt.legend()
 plt.tight_layout()
@@ -122,78 +122,3 @@ plt.xlabel('time (µs)')
 plt.ylabel('s')
 
 plt.show()
-
-"""
-simulated_experiments = set((h0, st) for (h0, st, kz) in sim.keys())
-omega_list = []
-for h, s in simulated_experiments:
-    ham = A(s) * sigmax / 2 + h * B(s) * sigmaz / 2
-    eigenvalues, eigenvectors = np.linalg.eigh(ham)
-    omega_list.append(eigenvalues[1] - eigenvalues[0])
-
-k_mean1 = []
-k_err1 = []
-plt.figure('chi2')
-
-    chi2 = CubicSpline(kzs1, chi2s1)
-    x = np.linspace(min(kzs1), max(kzs1), 300)
-    chi2_list = [chi2(k) for k in x]
-    k_opt = x[np.argmin(chi2_list)]
-    k_mean1.append(k_opt)
-
-    chi2 = CubicSpline(kzs1, chi2s1)
-    x = np.linspace(min(kzs1), max(kzs1), 300)
-    chi2_list = [chi2(k) for k in x]
-    k_opt = x[np.argmin(chi2_list)]
-    k_mean2.append(k_opt)
-
-    chi2_treshold = min(chi2_list) + 5
-    k_dx = 0
-    for i, chi in enumerate(chi2_list):
-        if chi < chi2_treshold:
-            k_dx = x[i]
-    k_err.append(k_dx - k_opt)
-    plt.plot(x, chi2_list)
-plt.xlabel(r'$k_z$')
-plt.ylabel(r'$\chi^2$')
-
-
-plt.figure('kz vs omega')
-# anneal_param_min_list
-plt.errorbar(omega_list, k_mean, k_err, ls='', marker='.')
-plt.xlabel(r'$\omega$')
-plt.ylabel('$k_z$')
-plt.title('kz vs omega')
-
-# figure
-plt.figure("therm", figsize=(15, 7.5))
-plt.ylabel(r'$\langle E \rangle $', fontsize=17)
-plt.yticks(fontsize=12.5)
-plt.xlabel('pause time (µs)', fontsize=15)
-plt.xticks(fontsize=12.5)
-plt.title(r"1 qubit thermalization", fontsize=17)
-x = list(range(0, 21, 2))
-
-c_dict = {
-    0.67: 'C0',
-    0.68: 'C1',
-    0.69: 'C2'
-}
-
-for i, (st, kz) in enumerate(sim1.keys()):
-    plt.errorbar(x, exp1[st], dexp1[st], c=c_dict[st], marker='o', ls='', label=str(st))
-    plt.plot(x, sim1[(st, kz)], c=c_dict[st], ls='--', label=f's={st}, k={kz}')
-
-
-# plt.legend()
-plt.tight_layout()
-
-x = np.linspace(0, 50)
-plt.figure('anneal schedule')
-plt.plot(x, t_to_s(x, 48, 0.7))
-plt.xlabel('time (µs)')
-plt.ylabel('s')
-
-
-plt.show()
-"""
