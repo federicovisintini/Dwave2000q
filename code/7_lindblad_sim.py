@@ -4,17 +4,15 @@ import scipy.interpolate
 import scipy.integrate as ode
 import pickle
 import concurrent.futures
-from settings import DATA_DIR, ANNEALING_SCHEDULE_XLS
+from settings import DATA_DIR, ANNEALING_SCHEDULE_XLS  # STS, HS_LIST
 import time
 
 # PARAMETERS
-h0_list = np.linspace(0.9, 1, 3)
-st_list = np.linspace(0.66, 0.69, 4)
-kz_list = np.linspace(0, 0.035, 71)
-kx_list = np.linspace(0, 3e-6, 61)
+kz_list = np.linspace(0.01, 0.03, 21)
+kx_list = np.linspace(0, 3e-6, 21)
 
 omega_c = 8 * np.pi
-anneal_pause_lenght = 1000 * np.arange(0, 21, 2)
+anneal_pause_lenght = 1000 * np.arange(0, 11)
 rho0 = np.array([1, 0, 0, 0], dtype=complex)
 
 # definitions
@@ -70,11 +68,12 @@ def simulate_anneal(args):
                              rtol=1e-4, args=(kz, kx, omega_c, ham))
 
     rho_list = [solution.y[:, i].reshape(2, 2) for i in range(len(solution.y[0]))]
-    mean_E = [np.trace(rho @ sigmaz).real for rho in rho_list]
+    sigma_z_expectation_value = [np.trace(rho @ sigmaz).real for rho in rho_list]
 
     # save results on file
-    with open(DATA_DIR / f'sbar_sim_xz_h{h0:.2f}_s{s_bar:.2f}_kz{kz:.4f}_kx{kx:.2e}.pkl', 'wb') as f:
-        pickle.dump(mean_E, f)
+    # with open(DATA_DIR / f'7_kz/z_s{s_bar:.2f}_h{h0:.3f}_kz{kz:.4f}.pkl', 'wb') as f:
+    with open(DATA_DIR / f'7_kzkx/zx_s{s_bar:.2f}_h{h0:.3f}_kz{kz:.4f}_kx{kx:.2e}.pkl', 'wb') as f:
+        pickle.dump(sigma_z_expectation_value, f)
     return
 
 
@@ -82,12 +81,16 @@ if __name__ == '__main__':
     tic = time.time()
 
     with concurrent.futures.ProcessPoolExecutor() as executor:
-        for h0 in h0_list:
-            for s_bar in st_list:
-                for kz in kz_list:
-                    for kx in kx_list:
-                        executor.submit(simulate_anneal, [h0, s_bar, kz, kx])
+        # for s_bar, hs in zip(STS, HS_LIST):
+        s_bar = 0.60  # [0.60, 0.65, 0.70, 0.75]
+        hs = [0.076, 0.20, 0.31, 0.417, 0.63, 0.84],
+        # hs = [0.088, 0.18, 0.273, 0.366, 0.55, 0.73, 0.92],
+        # hs = [0.080, 0.16, 0.24, 0.32, 0.48, 0.64, 0.80],
+        # hs = [0.071, 0.142, 0.212, 0.283, 0.425, 0.565, 0.71]
+        for h0 in hs:
+            for kz in kz_list:
+                for kx in kx_list:
+                    executor.submit(simulate_anneal, [h0, s_bar, kz, kx])
 
-    print(time.time() - tic)
+    print(f'{time.time() - tic:.1f} seconds')
     print('END!!')
-
