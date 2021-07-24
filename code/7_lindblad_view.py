@@ -66,10 +66,10 @@ for i, hs in enumerate(np.array(HS_LIST).transpose()):
     print()
 
 # experiment
-with open(DATA_DIR / '7_experiments_mean_spin.json', 'r') as f:
+with open(DATA_DIR / '7_20experiments_mean_spin.json', 'r') as f:
     exp_tmp = json.load(f)
 
-with open(DATA_DIR / '7_experiments_std_spin.json', 'r') as g:
+with open(DATA_DIR / '7_20experiments_std_spin.json', 'r') as g:
     dexp_tmp = json.load(g)
 
 exp = {}
@@ -257,5 +257,29 @@ plt.ylabel('$k_z$')
 plt.title(r'$k_z(\omega)$')
 plt.tight_layout()
 plt.legend(handles=c_handles + m_handles)
+
+# KX same omega
+fig, axs = plt.subplots(2, 4, squeeze=False, sharey='all', sharex='all')
+axs.flat[7].set_visible(False)
+
+for i, omega in enumerate(omegas):
+    # Z = np.zeros_like(X)
+    Z = np.ones_like(X)
+    for st, h in zip(STS, np.array(HS_LIST)[:, i]):
+        if h == h:
+            for ii, kx in enumerate(kx_order):
+                for jj, kz in enumerate(kz_order):
+                    # Z[jj, ii] += chi2xz[(st, h, kz, kx)]
+                    Z[jj, ii] *= chi2xz[(st, h, kz, kx)]
+
+    ax = axs.flat[i]
+    ax.set_title(f'omega={omegas[i]} GHz')
+    c = ax.pcolormesh(X, Y, Z, shading='nearest', cmap='RdBu', norm=LogNorm())
+    # fig.colorbar(c, ax=ax)
+
+    if i // 2 == 1:
+        ax.set_xlabel('kx')
+    if i % 2 == 0:
+        ax.set_ylabel('kz')
 
 plt.show()
